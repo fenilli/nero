@@ -1,0 +1,17 @@
+{
+  "type": "module",
+  "name": "nero",
+  "version": "0.1.0",
+  "description": "A lightweight toy compiler language for frontend apps, enabling reactive state, components, and DOM updates with minimal runtime.",
+  "scripts": {
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "toy compiler",
+    "frontend",
+    "reactive",
+    "minimal runtime"
+  ],
+  "author": "Luiz Gustavo Siqueira Fenilli <gustavofenilli@gmail.com>",
+  "license": "MIT"
+}
