@@ -30,15 +30,17 @@ const currentEffect = () => {
 
 /**
  * @param {Effect} effect
- * @param {Function} fn
- * @returns {Node}
  */
-const scopeEffect = (effect, fn) => {
+const startEffectScope = (effect) => {
     effectStack.push(effect);
-    const root = fn();
-    effectStack.pop();
+};
 
-    return root;
+/**
+ * @param {Component} component
+ * @param {Function} fn
+ */
+const endEffectScope = () => {
+    effectStack.pop();
 };
 
 /**
@@ -50,14 +52,17 @@ const currentComponent = () => {
 
 /**
  * @param {Component} component
+ */
+const startComponentScope = (component) => {
+    componentStack.push(component);
+};
+
+/**
+ * @param {Component} component
  * @param {Function} fn
  */
-const scopeComponent = (component, fn) => {
-    componentStack.push(component);
-    const root = fn();
+const endComponentScope = () => {
     componentStack.pop();
-
-    component.root = root;
 };
 
 /** @type {Set<Effect>} */
@@ -135,7 +140,9 @@ export const effect = (fn) => {
         execute() {
             cleanupEffect(effect);
 
-            scopeEffect(effect, fn);
+            startEffectScope(effect);
+            fn();
+            endEffectScope();
         }
     };
 
@@ -171,7 +178,8 @@ export const component = (fn) => {
 
     if (_component.parent) _component.parent.children.add(_component);
 
-    scopeComponent(_component, fn);
+    startComponentScope(_component);
+    _component.root = fn();
 
     return _component;
 };
@@ -205,6 +213,8 @@ export function mount(component, anchor) {
 
     for (const mq of component.mountQueue) mq();
     component.mountQueue = [];
+
+    endComponentScope();
 }
 
 /**

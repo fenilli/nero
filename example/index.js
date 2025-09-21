@@ -1,28 +1,51 @@
 import * as $ from '../src/runtime/index.js';
 
-const app_root = $.element("div");
 
-const App = () => {
+const Counter = () => {
     const [count, setCount] = $.signal(0);
 
-    $.effect(() => {
-        $.setText(app_root, `Count: ${count()}`);
+    const counter_root = $.element("span");
 
-        $.onCleanup(() => {
-            console.log("onCleanup");
+    $.effect(() => {
+        $.setText(counter_root, `Count: ${count()}`);
+    });
+
+    $.onMount(() => {
+        console.log("Counter: onMount");
+        const interval = setInterval(() => setCount(count() + 1), 1000);
+
+        $.onUnmount(() => {
+            console.log("Counter: onUnmount");
+            clearInterval(interval);
         });
     });
 
-    $.onMount(() => console.log("onMount"));
-    $.onUnmount(() => console.log("onUnmount"));
 
-    const increment = () => setCount(count() + 1);
-    setInterval(increment, 1000);
+    return counter_root;
+};
 
-    return app_root;
+
+const App = () => {
+    const div = $.element("div");
+
+    const couter = $.component(Counter);
+    $.mount(couter, div);
+
+    $.onMount(() => {
+        console.log("App: onMount")
+        const timeout = setTimeout(() => $.unmount(couter), 2000);
+
+        $.onUnmount(() => {
+            console.log("App: onUnmount");
+            clearTimeout(timeout);
+        });
+    });
+
+
+    return div;
 };
 
 const app = $.component(App);
 $.mount(app, document.body);
 
-setInterval(() => $.unmount(app), 5000)
+setTimeout(() => $.unmount(app), 5000);
