@@ -12,7 +12,8 @@
  * @property {Set<Effect>} effects
  * @property {Function[]} mountQueue
  * @property {Function[]} unmountQueue
- * @property {Node | null} root
+ * @property {Node | undefined} root
+ * @property {Function} render
  */
 
 /** @type {Array<Effect>} */
@@ -29,40 +30,10 @@ const currentEffect = () => {
 };
 
 /**
- * @param {Effect} effect
- */
-const startEffectScope = (effect) => {
-    effectStack.push(effect);
-};
-
-/**
- * @param {Component} component
- * @param {Function} fn
- */
-const endEffectScope = () => {
-    effectStack.pop();
-};
-
-/**
  * @returns {Component | undefined}
  */
 const currentComponent = () => {
     return componentStack[componentStack.length - 1];
-};
-
-/**
- * @param {Component} component
- */
-const startComponentScope = (component) => {
-    componentStack.push(component);
-};
-
-/**
- * @param {Component} component
- * @param {Function} fn
- */
-const endComponentScope = () => {
-    componentStack.pop();
 };
 
 /** @type {Set<Effect>} */
@@ -140,9 +111,9 @@ export const effect = (fn) => {
         execute() {
             cleanupEffect(effect);
 
-            startEffectScope(effect);
+            effectStack.push(effect);
             fn();
-            endEffectScope();
+            effectStack.pop();
         }
     };
 
@@ -167,20 +138,17 @@ export function onCleanup(fn) {
  * @returns {Component}
  */
 export const component = (fn) => {
+    /** @type {Component} */
     const _component = {
         parent: currentComponent(),
         children: new Set(),
         effects: new Set(),
         mountQueue: [],
         unmountQueue: [],
-        root: null,
+        render: fn,
     };
 
     if (_component.parent) _component.parent.children.add(_component);
-
-    startComponentScope(_component);
-    _component.root = fn();
-
     return _component;
 };
 
@@ -209,12 +177,15 @@ export function onUnmount(fn) {
  * @param {Node} anchor
  */
 export function mount(component, anchor) {
+    componentStack.push(component);
+    component.root = component.render();
+
     anchor.appendChild(component.root);
 
     for (const mq of component.mountQueue) mq();
     component.mountQueue = [];
 
-    endComponentScope();
+    componentStack.pop();
 }
 
 /**
