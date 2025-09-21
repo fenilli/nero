@@ -13,7 +13,6 @@
  * @property {Function[]} mountQueue
  * @property {Function[]} unmountQueue
  * @property {Node | undefined} root
- * @property {Function} render
  */
 
 /** @type {Array<Effect>} */
@@ -41,6 +40,9 @@ let pendingEffects = new Set();
 
 /** @type {boolean} */
 let scheduled = false;
+
+/** @type {boolean} */
+let isFlushingMount = false;
 
 /**
  * @param {Effect} effect
@@ -112,7 +114,8 @@ export const effect = (fn) => {
             cleanupEffect(effect);
 
             effectStack.push(effect);
-            fn();
+            const clp = fn();
+            if (typeof clp === 'function') effect.cleanups.add(clp);
             effectStack.pop();
         }
     };
@@ -121,16 +124,6 @@ export const effect = (fn) => {
 
     const component = currentComponent();
     if (component) component.effects.add(effect);
-};
-
-/**
- * @param {Function} fn
- */
-export function onCleanup(fn) {
-    const effect = currentEffect();
-    if (!effect) throw TypeError("onCleanup can only be called inside effects");
-
-    effect.cleanups.add(fn);
 };
 
 /**
@@ -145,10 +138,14 @@ export const component = (fn) => {
         effects: new Set(),
         mountQueue: [],
         unmountQueue: [],
-        render: fn,
     };
 
     if (_component.parent) _component.parent.children.add(_component);
+
+    componentStack.push(_component);
+    _component.root = fn();
+    componentStack.pop();
+
     return _component;
 };
 
@@ -166,6 +163,10 @@ export function onMount(fn) {
  * @param {Function} fn
  */
 export function onUnmount(fn) {
+    if (isFlushingMount) {
+        throw TypeError("onUnmount cannot be called inside onMount");
+    }
+
     const component = currentComponent();
     if (!component) throw TypeError("onUnmount can only be called inside a component");
 
@@ -177,15 +178,16 @@ export function onUnmount(fn) {
  * @param {Node} anchor
  */
 export function mount(component, anchor) {
-    componentStack.push(component);
-    component.root = component.render();
-
     anchor.appendChild(component.root);
+    isFlushingMount = true;
 
-    for (const mq of component.mountQueue) mq();
+    for (const mq of component.mountQueue) {
+        const clp = mq();
+        if (typeof clp === 'function') component.unmountQueue.push(clp);
+    }
+
+    isFlushingMount = false;
     component.mountQueue = [];
-
-    componentStack.pop();
 }
 
 /**

@@ -14,10 +14,11 @@ const Counter = () => {
         console.log("Counter: onMount");
         const interval = setInterval(() => setCount(count() + 1), 1000);
 
-        $.onUnmount(() => {
-            console.log("Counter: onUnmount");
-            clearInterval(interval);
-        });
+        return () => console.log(clearInterval(interval), "Counter: cleared interval");
+    });
+
+    $.onUnmount(() => {
+        console.log("Counter: onUnmount");
     });
 
 
@@ -35,10 +36,11 @@ const App = () => {
         console.log("App: onMount")
         const timeout = setTimeout(() => $.unmount(couter), 2000);
 
-        $.onUnmount(() => {
-            console.log("App: onUnmount");
-            clearTimeout(timeout);
-        });
+        return () => console.log(clearTimeout(timeout), "App: cleared timeout");
+    });
+
+    $.onUnmount(() => {
+        console.log("App: onUnmount");
     });
 
 
