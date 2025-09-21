@@ -1,83 +1,230 @@
-let context = [];
+/**
+ * @typedef {Object} Effect
+ * @property {Set<Set<Effect>>} deps
+ * @property {Set<Function>} cleanups
+ * @property {Function} execute
+ */
 
-let effectQueue = new Set();
-let flushing = false;
+/**
+ * @typedef {Object} Component
+ * @property {Component} parent
+ * @property {Set<children>} children
+ * @property {Set<Effect>} effects
+ * @property {Function[]} mountQueue
+ * @property {Function[]} unmountQueue
+ * @property {Node | null} root
+ */
 
-function subscribe(running, subscriptions) {
-    subscriptions.add(running);
-    running.dependencies.add(subscriptions);
-}
+/** @type {Array<Effect>} */
+const effectStack = [];
 
-function unsubscribe(running) {
-    for (const dep of running.dependencies) dep.delete(running);
-    running.dependencies.clear();
-}
+/** @type {Array<Component>} */
+const componentStack = [];
 
-function flush() {
-    flushing = true;
+/**
+ * @returns {Effect | undefined}
+ */
+const currentEffect = () => {
+    return effectStack[effectStack.length - 1];
+};
+
+/**
+ * @param {Effect} effect
+ * @param {Function} fn
+ * @returns {Node}
+ */
+const scopeEffect = (effect, fn) => {
+    effectStack.push(effect);
+    const root = fn();
+    effectStack.pop();
+
+    return root;
+};
+
+/**
+ * @returns {Component | undefined}
+ */
+const currentComponent = () => {
+    return componentStack[componentStack.length - 1];
+};
+
+/**
+ * @param {Component} component
+ * @param {Function} fn
+ */
+const scopeComponent = (component, fn) => {
+    componentStack.push(component);
+    const root = fn();
+    componentStack.pop();
+
+    component.root = root;
+};
+
+/** @type {Set<Effect>} */
+let pendingEffects = new Set();
+
+/** @type {boolean} */
+let scheduled = false;
+
+/**
+ * @param {Effect} effect
+*/
+const schedule = (effect) => {
+    pendingEffects.add(effect);
+
+    if (scheduled) return;
+
+    scheduled = true;
     queueMicrotask(() => {
-        for (const effect of effectQueue) effect.execute();
-        effectQueue.clear();
-        flushing = false;
-    });
-}
+        scheduled = false;
 
-export function signal(initial) {
+        for (const effect of [...pendingEffects]) effect.execute();
+    });
+};
+
+/**
+ * @template T
+ * @param {T} initial
+ * @returns {[() => T, (next: T) => void]}
+ */
+export const signal = (initial) => {
     let value = initial;
-    const subscriptions = new Set();
+    /** @type {Set<Effect>} */
+    const subscribers = new Set();
 
     function read() {
-        const running = context[context.length - 1];
-        if (running) subscribe(running, subscriptions);
+        const effect = currentEffect();
+
+        if (effect) {
+            subscribers.add(effect);
+            effect.deps.add(subscribers);
+        }
+
         return value;
     }
 
-    function write(newVal) {
-        if (newVal === value) return;
+    function write(next) {
+        if (value === next) return;
 
-        value = newVal;
-
-        for (const sub of [...subscriptions]) effectQueue.add(sub);
-        if (!flushing) flush();
+        value = next;
+        for (const effect of [...subscribers]) schedule(effect);
     }
 
     return [read, write];
+};
+
+/**
+ * @type {Effect} effect
+ */
+const cleanupEffect = (effect) => {
+    for (const clp of effect.cleanups) clp();
+    effect.cleanups.clear();
+
+    for (const dep of effect.deps) dep.delete(effect);
+    effect.deps.clear();
 }
 
-export function derive(fn) {
-    let [value, setValue] = signal(fn());
-    effect(() => setValue(fn()));
-    return value;
-}
-
-export function effect(fn) {
-    function execute() {
-        for (const cleanup of running.cleanups) cleanup();
-        running.cleanups.clear();
-
-        unsubscribe(running);
-        context.push(running);
-
-        try {
-            const cleanup = fn();
-            if (typeof cleanup === 'function') running.cleanups.add(cleanup);
-        } finally {
-            context.pop();
-        }
-    }
-
-    const running = {
-        execute,
-        dependencies: new Set(),
+/**
+ * @param {Function} fn
+ */
+export const effect = (fn) => {
+    /** @type {Effect} */
+    const effect = {
+        deps: new Set(),
         cleanups: new Set(),
+        execute() {
+            cleanupEffect(effect);
+
+            scopeEffect(effect, fn);
+        }
     };
 
-    execute();
+    effect.execute();
+
+    const component = currentComponent();
+    if (component) component.effects.add(effect);
+};
+
+/**
+ * @param {Function} fn
+ */
+export function onCleanup(fn) {
+    const effect = currentEffect();
+    if (!effect) throw TypeError("onCleanup can only be called inside effects");
+
+    effect.cleanups.add(fn);
+};
+
+/**
+ * @param {() => Node} fn
+ * @returns {Component}
+ */
+export const component = (fn) => {
+    const _component = {
+        parent: currentComponent(),
+        children: new Set(),
+        effects: new Set(),
+        mountQueue: [],
+        unmountQueue: [],
+        root: null,
+    };
+
+    if (_component.parent) _component.parent.children.add(_component);
+
+    scopeComponent(_component, fn);
+
+    return _component;
+};
+
+/**
+ * @param {Function} fn
+ */
+export function onMount(fn) {
+    const component = currentComponent();
+    if (!component) throw TypeError("onMount can only be called inside a component");
+
+    component.mountQueue.push(fn);
 }
 
-export function onCleanup(fn) {
-    const running = context[context.length - 1];
-    if (!running) throw Error("onCleanup should be called inside an effect");
+/**
+ * @param {Function} fn
+ */
+export function onUnmount(fn) {
+    const component = currentComponent();
+    if (!component) throw TypeError("onUnmount can only be called inside a component");
 
-    running.cleanups.add(fn);
+    component.unmountQueue.push(fn);
+};
+
+/**
+ * @param {Component} component
+ * @param {Node} anchor
+ */
+export function mount(component, anchor) {
+    anchor.appendChild(component.root);
+
+    for (const mq of component.mountQueue) mq();
+    component.mountQueue = [];
+}
+
+/**
+ * @param {Component} component 
+ */
+function unmountChildren(component) {
+    for (const child of component.children) unmountChildren(child);
+    component.children.clear();
+
+    for (const effect of component.effects) cleanupEffect(effect);
+    component.effects.clear();
+
+    for (const umq of component.unmountQueue) umq();
+    component.unmountQueue = [];
+}
+
+/**
+ * @param {Component} component
+ */
+export function unmount(component) {
+    if (component.root && component.root.parentNode) component.root.parentNode.removeChild(component.root);
+    unmountChildren(component);
 }

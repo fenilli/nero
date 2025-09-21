@@ -1,50 +1,28 @@
 import * as $ from '../src/runtime/index.js';
 
-function Child() {
-    const [count, setCount] = $.signal(0);
-    const double = $.derive(() => count() * 2);
+const app_root = $.element("div");
 
-    const frag = $.fragment();
-    const textNode = $.text();
-
-    $.effect(() => {
-        $.setText(textNode, `Hello World: ${count()} and doubled: ${double()}`);
-    });
-
-    $.effect(() => {
-        const id = setInterval(() => {
-            setCount(count() + 1);
-        }, 1000);
-
-        return () => clearInterval(id);
-    });
-
-    $.append(frag, textNode);
-
-    return { frag, unmount: () => { console.log("Unmounted") } };
-}
-
-function App() {
+const App = () => {
     const [count, setCount] = $.signal(0);
 
-    const frag = $.fragment();
-    const container = $.element("div");
-    $.setClassName(container, "my-class");
-
     $.effect(() => {
-        const id = setInterval(() => setCount(count() + 1), 1000);
-        return () => clearInterval(id);
+        $.setText(app_root, `Count: ${count()}`);
+
+        $.onCleanup(() => {
+            console.log("onCleanup");
+        });
     });
 
-    {
-        const fragment = $.If(() => count() >= 1 && count() <= 3, Child());
+    $.onMount(() => console.log("onMount"));
+    $.onUnmount(() => console.log("onUnmount"));
 
-        $.append(container, fragment);
-    }
+    const increment = () => setCount(count() + 1);
+    setInterval(increment, 1000);
 
-    $.append(frag, container);
+    return app_root;
+};
 
-    return { frag };
-}
+const app = $.component(App);
+$.mount(app, document.body);
 
-$.render(App, document.body);
+setInterval(() => $.unmount(app), 5000)
