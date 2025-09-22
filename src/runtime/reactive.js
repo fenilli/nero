@@ -1,17 +1,27 @@
-import { scopeEffect, currentEffect, currentComponent } from './context.js';
-
 /**
  * @typedef {Object} Effect
- * @property {Set<Set<Effect>>} deps
- * @property {Set<Function>} cleanups
- * @property {Function} execute
- */
+ * @property {Effect} __parent,
+ * @property {Set<Effect>} __children,
+ * @property {Set<Set<Effect>>} __deps
+ * @property {Set<Function>} __cleanups
+ * @property {() => void} execute
+*/
+
+/** @type {Array<Effect>} */
+const effectStack = [];
 
 /** @type {Set<Effect>} */
 let pendingEffects = new Set();
 
 /** @type {boolean} */
 let scheduled = false;
+
+/**
+ * @returns {Effect | undefined}
+ */
+export const currentEffect = () => {
+    return effectStack[effectStack.length - 1];
+};
 
 /**
  * @param {Effect} effect
@@ -29,6 +39,20 @@ const schedule = (effect) => {
 };
 
 /**
+ * @param {Effect} effect 
+ */
+const cleanupEffect = (effect) => {
+    for (const child of effect.__children) cleanupEffect(child);
+    effect.__children.clear();
+
+    for (const dep of effect.__deps) dep.delete(effect);
+    effect.__deps.clear();
+
+    for (const clp of effect.__cleanups) clp();
+    effect.__cleanups.clear();
+}
+
+/**
  * @template T
  * @param {T} initial
  * @returns {[() => T, (next: T) => void]}
@@ -43,7 +67,7 @@ export const signal = (initial) => {
 
         if (effect) {
             subscribers.add(effect);
-            effect.deps.add(subscribers);
+            effect.__deps.add(subscribers);
         }
 
         return value;
@@ -65,22 +89,29 @@ export const signal = (initial) => {
 export const effect = (fn) => {
     /** @type {Effect} */
     const effect = {
-        deps: new Set(),
-        cleanups: new Set(),
+        __parent: currentEffect(),
+        __children: new Set(),
+        __deps: new Set(),
+        __cleanups: new Set(),
         execute() {
-            for (const clp of effect.cleanups) clp();
-            effect.cleanups.clear();
+            cleanupEffect(effect);
 
-            for (const dep of effect.deps) dep.delete(effect);
-            effect.deps.clear();
-
-            const clp = scopeEffect(effect, fn);
-            if (typeof clp === 'function') effect.cleanups.add(clp);
+            effectStack.push(effect);
+            const clp = fn();
+            if (typeof clp === 'function') this.__cleanups.add(clp);
+            effectStack.pop();
         }
     };
 
+    if (effect.__parent) effect.__parent.__children.add(effect);
     effect.execute();
+};
 
-    const component = currentComponent();
-    if (component) component.effects.add(effect);
+/**
+ * @param {Function} fn 
+ */
+export const onCleanup = (fn) => {
+    const effect = currentEffect();
+    if (!effect) throw TypeError('The lifecycle onCleanup must be called inside an effect');
+    effect.__cleanups.add(fn);
 };

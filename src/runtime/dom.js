@@ -4,9 +4,11 @@
  * @returns {HTMLElementTagNameMap[K]}
  */
 export const element = (tag) => document.createElement(tag);
+export const text = () => document.createTextNode("");
+export const marker = () => document.createComment("");
 
 /**
- * @param {Node} node
+ * @param {Element} node
  * @param {string} text
  */
 export const setText = (node, text) => { node.textContent = text };

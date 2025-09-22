@@ -1,51 +1,33 @@
 import * as $ from '../src/runtime/index.js';
 
-const Counter = () => {
-    const [count, setCount] = $.signal(0);
+const Nested = () => {
+    const text = $.text();
 
-    const counter_root = $.element("span");
+    $.setText(text, "Nested Hello World");
 
-    $.effect(() => {
-        $.setText(counter_root, `Count: ${count()}`);
-    });
+    $.onCleanup(() => console.log("Nested onCleanup"));
 
-    $.onMount(() => {
-        console.log("Counter: onMount");
-        const interval = setInterval(() => setCount(count() + 1), 1000);
-
-        return () => console.log(clearInterval(interval), "Counter: cleared interval");
-    });
-
-    $.onUnmount(() => {
-        console.log("Counter: onUnmount");
-    });
-
-
-    return counter_root;
+    return text;
 };
 
 const App = () => {
+    const [show, setShow] = $.signal(true);
+
     const div = $.element("div");
+    const anchor = $.marker();
+    div.append(anchor);
 
-    const couter = $.component(Counter);
-    $.mount(couter, div);
+    const interval = setInterval(() => {
+        setShow(!show());
+    }, 2000);
 
-    $.onMount(() => {
-        console.log("App: onMount")
-        const timeout = setTimeout(() => $.unmount(couter), 2000);
+    $.onCleanup(() => clearInterval(interval));
 
-        return () => console.log(clearTimeout(timeout), "App: cleared timeout");
+    $.If(anchor, (mount) => {
+        if (show()) mount(() => Nested());
     });
-
-    $.onUnmount(() => {
-        console.log("App: onUnmount");
-    });
-
 
     return div;
 };
 
-const app = $.component(App);
-$.mount(app, document.body);
-
-setTimeout(() => $.unmount(app), 5000);
+$.render(App, document.body);

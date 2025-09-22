@@ -1,44 +1,50 @@
-/** @typedef {import('./component.js').Component} Component */
+import { effect, onCleanup } from './reactive.js';
 
 /**
- * @param {Component} component 
+ * @param {Element} element
+ * @param {Element} anchor
+ * @returns {Element}
  */
-const unmountChildren = (component) => {
-    for (const child of component.children) unmountChildren(child);
-    component.children.clear();
+export const mount = (element, anchor) => {
+    if (anchor.nodeType === Node.COMMENT_NODE) anchor.parentNode.insertBefore(element, anchor);
+    else anchor.appendChild(element);
 
-    for (const effect of component.effects) {
-        for (const clp of effect.cleanups) clp();
-        effect.cleanups.clear();
-
-        for (const dep of effect.deps) dep.delete(effect);
-        effect.deps.clear();
-    }
-    component.effects.clear();
-
-    for (const umq of component.unmountQueue) umq();
-    component.unmountQueue = [];
+    return element;
 };
 
 /**
- * @param {Component} component
- * @param {Node} anchor
+ * @param {() => Element} fn
+ * @param {Element} anchor
  */
-export const mount = (component, anchor) => {
-    anchor.appendChild(component.root);
-
-    for (const mq of component.mountQueue) {
-        const clp = mq();
-        if (typeof clp === 'function') component.unmountQueue.push(clp);
-    }
-
-    component.mountQueue = [];
+export const render = (fn, anchor) => {
+    effect(() => {
+        const root = mount(fn(), anchor);
+        onCleanup(() => root.remove());
+    });
 };
 
 /**
- * @param {Component} component
+ * @param {Element} anchor
+ * @param {(mount: () => Element) => Element | void} fn
  */
-export const unmount = (component) => {
-    if (component.root && component.root.parentNode) component.root.parentNode.removeChild(component.root);
-    unmountChildren(component);
+export const If = (anchor, fn) => {
+    effect(() => {
+        let el = null;
+
+        /**
+         * @param {() => Element} element
+        */
+        const rootFn = (fn) => {
+            el = mount(fn(), anchor);
+        };
+
+        fn(rootFn);
+
+        onCleanup(() => {
+            if (el) {
+                el.remove();
+                el = null;
+            }
+        });
+    });
 };
