@@ -1,6 +1,5 @@
 import * as $ from '../src/runtime/index.js';
 
-
 const Counter = () => {
     const [count, setCount] = $.signal(0);
 
@@ -24,7 +23,6 @@ const Counter = () => {
 
     return counter_root;
 };
-
 
 const App = () => {
     const div = $.element("div");
