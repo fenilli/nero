@@ -1,3 +1,4 @@
-export * from './dom.js';
-export { signal, effect, onCleanup } from './reactive.js';
-export * from './render.js';
+export { component } from './component.js';
+export { effect } from './effect.js';
+export { signal } from './signal.js';
+export { onCleanup } from './lifecycle.js';

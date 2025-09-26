@@ -1,33 +1,56 @@
 import * as $ from '../src/runtime/index.js';
 
-const Nested = () => {
-    const text = $.text();
+const GrandChild = () => {
+    const [count, setCount] = $.signal(0);
 
-    $.setText(text, "Nested Hello World");
+    $.effect(() => {
+        console.log(`GrandChild count: ${count()}`);
 
-    $.onCleanup(() => console.log("Nested onCleanup"));
+        $.onCleanup(() => console.log('GrandChild effect cleanup'));
+    });
 
-    return text;
+    const i = setInterval(() => setCount(v => v + 1), 1000);
+
+    $.onCleanup(() => {
+        clearInterval(i);
+        console.log('GrandChild component cleanup');
+    });
+};
+
+const Child = () => {
+    const grand = $.component(GrandChild);
+
+    $.onCleanup(() => {
+        console.log('Child component cleanup');
+        grand.cleanup();
+    });
 };
 
 const App = () => {
     const [show, setShow] = $.signal(true);
 
-    const div = $.element("div");
-    const anchor = $.marker();
-    div.append(anchor);
+    const t = setTimeout(() => setShow(false), 2000);
 
-    const interval = setInterval(() => {
-        setShow(!show());
-    }, 2000);
+    $.effect(() => {
+        if (show()) {
+            const child = $.component(Child);
 
-    $.onCleanup(() => clearInterval(interval));
-
-    $.If(anchor, (mount) => {
-        if (show()) mount(() => Nested());
+            $.onCleanup(() => {
+                console.log('Conditional Child cleanup');
+                child.cleanup();
+            });
+        }
     });
 
-    return div;
+    $.onCleanup(() => {
+        clearTimeout(t);
+        console.log('App component cleanup');
+    });
 };
 
-$.render(App, document.body);
+const root = $.component(App);
+
+setTimeout(() => {
+    root.cleanup();
+    console.log('Root cleanup');
+}, 5000);
