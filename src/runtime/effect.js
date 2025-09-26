@@ -2,7 +2,7 @@ import { Context, currentContext } from './context.js';
 
 const EFFECT = 0;
 
-class Effect extends Context {
+export class Effect extends Context {
     /** @type {Array<Set<Effect>>} */
     _deps = [];
 

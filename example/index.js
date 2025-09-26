@@ -17,7 +17,15 @@ const GrandChild = () => {
     });
 };
 
+const AnotherChild = () => {
+    console.log('mount another child');
+
+    $.onCleanup(() => console.log('AnotherChild component cleanup'));
+};
+
 const Child = () => {
+    console.log('mount child');
+
     const grand = $.component(GrandChild);
 
     $.onCleanup(() => {
@@ -31,16 +39,15 @@ const App = () => {
 
     const t = setTimeout(() => setShow(false), 2000);
 
-    $.effect(() => {
-        if (show()) {
-            const child = $.component(Child);
+    {
+        const consequent = () => $.component(Child);
+        const alternate = () => $.component(AnotherChild);
 
-            $.onCleanup(() => {
-                console.log('Conditional Child cleanup');
-                child.cleanup();
-            });
-        }
-    });
+        $.when((mount) => {
+            if (show()) mount(consequent)
+            else mount(alternate);
+        });
+    }
 
     $.onCleanup(() => {
         clearTimeout(t);

@@ -2,7 +2,7 @@ import { Context, currentContext } from './context.js';
 
 const COMPONENT = 1;
 
-class Component extends Context {
+export class Component extends Context {
     constructor(fn) {
         super(COMPONENT, fn);
     }
