@@ -1,42 +1,76 @@
-import { Context, currentContext } from './context.js';
-
-const EFFECT = 0;
-
-export class Effect extends Context {
-    /** @type {Array<Set<Effect>>} */
-    _deps = [];
-
-    constructor(fn) {
-        super(EFFECT, fn);
-    }
-
-    execute() {
-        this.cleanup();
-        super.execute();
-    }
-
-    cleanup() {
-        super.cleanup();
-
-        for (const dep of this._deps) dep.delete(this);
-        this._deps = [];
-    }
-}
+import { currentContext } from './context.js';
 
 /**
- * @param {Function} fn 
- * @returns {Effect} 
+ * @typedef {() => void} DisposeFn
+ */
+
+/**
+ * @typedef {() => (void | DisposeFn)} RunFn
+ */
+
+/**
+ * @typedef {Object} Effect
+ * @property {Array<Set<Effect>>} _deps
+ * @property {Array<Function>} _cleanups
+ * @property {() => void} run
+ * @property {() => void} dispose
+ */
+
+/**
+ * @type {Array<Effect>}
+ */
+const effectStack = [];
+
+/**
+ * @param {Effect} effect 
+ */
+export const pushEffect = (effect) => effectStack.push(effect);
+export const popEffect = () => effectStack.pop();
+
+/**
+ * @type {() => Effect | undefined}
+ */
+export const currentEffect = () => effectStack[effectStack.length - 1];
+
+/**
+ * @param {RunFn} fn
  */
 export const effect = (fn) => {
-    const effect = new Effect(fn);
-    effect.execute();
+    /** @type {Effect} */
+    const effect = {
+        _deps: [],
+        _cleanups: [],
+        run() {
+            this.dispose();
+
+            pushEffect(effect);
+            const res = fn();
+            if (typeof res === 'function') this._cleanups.push(res);
+            popEffect();
+        },
+        dispose() {
+            for (const dep of this._deps) dep.delete(this);
+            this._deps = [];
+
+            for (const cleanup of this._cleanups) cleanup();
+            this._cleanups = [];
+        },
+    };
+
+    effect.run();
+
+    const context = currentContext();
+    if (context) context._effects.push(effect);
+
     return effect;
 };
 
 /**
- * @returns {Effect | undefined}
+ * @param {Function} fn 
  */
-export const currentEffect = () => {
-    const ctx = /** @type {Context} */ (currentContext());
-    return ctx && ctx._type === EFFECT ? ctx : undefined;
+export const onDispose = (fn) => {
+    const e = currentEffect();
+    if (!e) throw TypeError('onDispose can be only added to an active effect');
+
+    e._cleanups.push(fn);
 };

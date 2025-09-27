@@ -1,63 +1,49 @@
+import * as h from '../src/dom/index.js';
 import * as $ from '../src/runtime/index.js';
 
-const GrandChild = () => {
+const root_child = () => h.text('hello world child');
+
+const Child = (anchor, props) => {
+    const text = root_child();
+
+    if (props.title) h.setText(text, props.title);
+
+    h.after(anchor, text);
+};
+
+const root = () => {
+    const div = h.element('div');
+    const h1 = h.element('h1');
+
+    h.append(div, h1);
+
+    const child = h.comment('child');
+
+    h.append(div, child);
+
+    return div;
+};
+
+const App = (anchor) => {
     const [count, setCount] = $.signal(0);
 
+    const i = setInterval(() => setCount((v) => v + 1), 1000);
+
+    const div = root();
+    const h1 = h.child(div);
+
+    const child = h.sibling(h1);
+
+    Child(child, { title: 'Hello World' });
+
     $.effect(() => {
-        console.log(`GrandChild count: ${count()}`);
-
-        $.onCleanup(() => console.log('GrandChild effect cleanup'));
+        h.setText(h1, `Count: ${count()}`);
     });
 
-    const i = setInterval(() => setCount(v => v + 1), 1000);
+    $.onDestroy(() => clearInterval(i));
 
-    $.onCleanup(() => {
-        clearInterval(i);
-        console.log('GrandChild component cleanup');
-    });
+    h.append(anchor, div);
 };
 
-const AnotherChild = () => {
-    console.log('mount another child');
-
-    $.onCleanup(() => console.log('AnotherChild component cleanup'));
-};
-
-const Child = () => {
-    console.log('mount child');
-
-    const grand = $.component(GrandChild);
-
-    $.onCleanup(() => {
-        console.log('Child component cleanup');
-        grand.cleanup();
-    });
-};
-
-const App = () => {
-    const [show, setShow] = $.signal(true);
-
-    const t = setTimeout(() => setShow(false), 2000);
-
-    {
-        const consequent = () => $.component(Child);
-        const alternate = () => $.component(AnotherChild);
-
-        $.when((mount) => {
-            if (show()) mount(consequent)
-            else mount(alternate);
-        });
-    }
-
-    $.onCleanup(() => {
-        clearTimeout(t);
-        console.log('App component cleanup');
-    });
-};
-
-const root = $.component(App);
-
-setTimeout(() => {
-    root.cleanup();
-    console.log('Root cleanup');
-}, 5000);
+const ctx = h.render(App, document.body);
+console.log(JSON.stringify(ctx, undefined, 2));

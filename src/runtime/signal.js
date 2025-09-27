@@ -28,7 +28,7 @@ const schedule = (effect) => {
     scheduled = true;
     queueMicrotask(() => {
         scheduled = false;
-        for (const effect of [...pending]) effect.execute();
+        for (const effect of [...pending]) effect.run();
         pending.clear();
     });
 };
