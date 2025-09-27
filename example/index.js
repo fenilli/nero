@@ -9,6 +9,11 @@ const Child = (anchor, props) => {
     if (props.title) h.setText(text, props.title);
 
     h.after(anchor, text);
+
+    $.onDestroy(() => {
+        console.log('destroy');
+        h.remove(text);
+    });
 };
 
 const root = () => {
@@ -34,7 +39,15 @@ const App = (anchor) => {
 
     const child = h.sibling(h1);
 
-    Child(child, { title: 'Hello World' });
+    {
+        const consequent = () => {
+            Child(child, { title: 'Hello World' });
+        };
+
+        h.when((render) => {
+            if (!(count() % 5 === 0)) render(consequent);
+        });
+    }
 
     $.effect(() => {
         h.setText(h1, `Count: ${count()}`);
