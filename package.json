@@ -1,17 +1,21 @@
 {
-  "type": "module",
   "name": "nero",
-  "version": "0.1.0",
-  "description": "A lightweight toy compiler language for frontend apps, enabling reactive state, components, and DOM updates with minimal runtime.",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "npx serve ."
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "toy compiler",
-    "frontend",
-    "reactive",
-    "minimal runtime"
-  ],
-  "author": "Luiz Gustavo Siqueira Fenilli <gustavofenilli@gmail.com>",
-  "license": "MIT"
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vite": "npm:rolldown-vite@7.1.12"
+  },
+  "overrides": {
+    "vite": "npm:rolldown-vite@7.1.12"
+  },
+  "dependencies": {
+    "@types/node": "^24.5.2"
+  }
 }
