@@ -26,3 +26,29 @@ export const when = (condition: ReadableSignal<boolean>, consequent: () => Conte
         }
     });
 };
+
+export const index = <T>(item: T) => item;
+
+export const each = <T>(items: ReadableSignal<Array<T>>, key: (item: T) => string | number, render: (item: T) => Context) => {
+    const nodes: Map<string | number, Context> = new Map();
+
+    effect(() => {
+        const list = items();
+        const seen = new Set<string | number>();
+
+        for (const item of list) {
+            const k = key(item);
+            seen.add(k);
+
+            const context = nodes.get(k);
+            if (!context) nodes.set(k, render(item));
+        }
+
+        for (const [k, context] of nodes) {
+            if (!seen.has(k)) {
+                context.destroy();
+                nodes.delete(k);
+            }
+        }
+    });
+};

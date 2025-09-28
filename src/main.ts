@@ -19,9 +19,11 @@ const logContext = (context: $.Context, ident = '') => {
 
 const context = $.context(() => {
   const [show, setShow] = $.signal(false);
+  const [items, setItems] = $.signal([0, 1, 2]);
 
   const i = setInterval(() => {
     setShow(!show());
+    setItems((v) => [...v, v.length]);
   }, 3000);
 
   // console.log('init');
@@ -40,6 +42,16 @@ const context = $.context(() => {
     });
 
     $.when(show, consequent, alternate);
+  }
+
+  {
+    const item = (item: number) => $.context(() => {
+      console.log(item);
+
+      $.onDestroy(() => console.log(`destroy ${item}`));
+    });
+
+    $.each(items, $.index, item);
   }
 
   $.onDestroy(() => {

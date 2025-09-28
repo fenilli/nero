@@ -10,4 +10,6 @@ export {
     onDispose,
     signal,
     when,
+    index,
+    each,
 } from './runtime';
