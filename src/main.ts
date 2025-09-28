@@ -27,26 +27,19 @@ const context = $.context(() => {
   // console.log('init');
 
   {
-    let mounted: $.Context | null;
+    const consequent = () => $.context(() => {
+      console.log('init consequent');
 
-    $.effect(() => {
-      // console.log('run eff');
-      if (show()) {
-        if (!mounted)
-          mounted = $.context(() => {
-            console.log('init 2');
-
-            $.onDestroy(() => console.log('destroy 2'));
-          });
-      } else {
-        if (mounted) {
-          mounted.destroy();
-          mounted = null;
-        }
-      }
-
-      // $.onDispose(() => console.log('dipose eff'));
+      $.onDestroy(() => console.log('destroy consequent'));
     });
+
+    const alternate = () => $.context(() => {
+      console.log('init alternate');
+
+      $.onDestroy(() => console.log('destroy alternate'));
+    });
+
+    $.when(show, consequent, alternate);
   }
 
   $.onDestroy(() => {

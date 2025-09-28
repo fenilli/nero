@@ -9,4 +9,5 @@ export {
     effect,
     onDispose,
     signal,
+    when,
 } from './runtime';
