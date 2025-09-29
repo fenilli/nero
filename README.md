@@ -1,3 +1,43 @@
 # Nero
 
-## A lightweight toy compiler language for frontend apps, enabling reactive state, components, and DOM updates with minimal runtime.
+> [!WARNING]
+> Nero is an experimental project created for learning purposes, it is **not intended for production use**. The focus is on exploring how reactivity libraries and compilers work internally, not on building a stable or feature-complete framework.
+
+Nero is a **runtime** and **compiler** for reactive frontend apps, focused on fine-grained reactivity, context-based lifecycles, and minimal DOM updates.
+
+## Features
+
+- Reactive state with **signals** and **effects**
+- Scoped lifecycles using **contexts** and cleanup hooks
+- Direct DOM helpers for elements, text, and updates
+- Built-in support for **conditionals** and **lists**
+- Fine-grained updates without a virtual DOM
+- Planned **DSL compiler** to generate components from the runtime and dom helpers.
+
+## Roadmap
+
+### Runtime
+
+- [ ] Improved errors and warnings.
+- [ ] Built-in event delegation.
+- [ ] Support for async resources.
+- [ ] TypeScript-first runtime with better typings.
+
+### Compiler
+
+- [ ] A custom DSL compiler that transforms a higher-level declarative syntax into runtime calls.
+- [ ] Support for declarative template syntax.
+
+### Tooling
+
+- [ ] Vite plugin integration.
+- [ ] Playground to show code compilationd and generation.
+- [ ] Hot reload for the compiler and runtime.
+
+### Documentation
+
+- [ ] Runtime usage documentation to be used manually.
+- [ ] Clear documentation about the DSL features and transformation.
+- [ ] Tutorials for how to write components using signals and effects.
+- [ ] Examples of using the controls for conditionals and lists.
+- [ ] Showcase of a complete application.
