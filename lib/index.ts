@@ -9,7 +9,23 @@ export {
     effect,
     onDispose,
     signal,
-    when,
-    index,
-    each,
 } from './runtime';
+
+export {
+    fragment,
+    element,
+    text,
+    comment,
+    setClassList,
+    setStyle,
+    child,
+    sibling,
+    append,
+    after,
+    insertBefore,
+    remove,
+    render,
+    when,
+    each,
+    index,
+} from './dom';
