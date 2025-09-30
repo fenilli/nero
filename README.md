@@ -9,7 +9,7 @@ Nero is a **runtime** and **compiler** for reactive frontend apps, focused on fi
 
 - Reactive state with **signals** and **effects**
 - Scoped lifecycles using **contexts** and cleanup hooks
-- Direct DOM helpers for elements, text, and updates
+- DOM helpers for html creation and manipulation
 - Built-in support for **conditionals** and **lists**
 - Fine-grained updates without a virtual DOM
 - Planned **DSL compiler** to generate components from the runtime and dom helpers.
@@ -20,8 +20,11 @@ Nero is a **runtime** and **compiler** for reactive frontend apps, focused on fi
 
 - [ ] Improved errors and warnings.
 - [ ] Built-in event delegation.
+- [x] Event listener and cleanup.
+- [x] More helpers for attributes and properties.
 - [ ] Support for async resources.
-- [ ] TypeScript-first runtime with better typings.
+- [x] Factory from html for easier dom creation.
+- [ ] Untrack for getting value without dependency creation.
 
 ### Compiler
 
@@ -33,6 +36,7 @@ Nero is a **runtime** and **compiler** for reactive frontend apps, focused on fi
 - [ ] Vite plugin integration.
 - [ ] Playground to show code compilationd and generation.
 - [ ] Hot reload for the compiler and runtime.
+- [ ] Instropection of context, signals and effects.
 
 ### Documentation
 

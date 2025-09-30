@@ -1,14 +1,14 @@
 import { type Context, type ReadableSignal, effect, context } from '../runtime';
-import { after, insertBefore, remove } from './render';
+import { after, remove } from './utils';
 
-export const when = (anchor: ChildNode, renderFn: (render: (fn: () => ChildNode) => void) => void) => {
+export const when = (anchor: Node, renderFn: (render: (fn: () => Node) => void) => void) => {
     let node: Context | null = null;
-    let lastRender: (() => ChildNode) | null = null;
+    let lastRender: (() => Node) | null = null;
 
     effect(() => {
-        let rendered: (() => ChildNode) | null = null;
+        let rendered: (() => Node) | null = null;
 
-        const render = (fn: () => ChildNode) => {
+        const render = (fn: () => Node) => {
             rendered = fn;
 
             if (lastRender === fn) return;
@@ -38,20 +38,14 @@ export const when = (anchor: ChildNode, renderFn: (render: (fn: () => ChildNode)
     });
 };
 
-export const index = <T>(item: T, index: number) => {
-    if (typeof item === 'object') return index;
-
-    return item;
-};
-
-export const each = <T>(anchor: ChildNode, items: ReadableSignal<Array<T>>, key: (item: T, index: number) => string | number, renderFn: (item: T, index: number) => ChildNode) => {
-    const nodes: Map<string | number, { context: Context, el: ChildNode }> = new Map();
+export const each = <T>(anchor: Node, items: ReadableSignal<Array<T>>, key: (item: T, index: number) => string | number, renderFn: (item: T, index: number) => Node) => {
+    const nodes: Map<string | number, { context: Context, el: Node }> = new Map();
 
     effect(() => {
         const list = items();
         const seen = new Set<string | number>();
 
-        let prev: ChildNode = anchor;
+        let prev: Node = anchor;
 
         for (let i = 0; i < list.length; i++) {
             const item = list[i];
@@ -61,22 +55,19 @@ export const each = <T>(anchor: ChildNode, items: ReadableSignal<Array<T>>, key:
             let entry = nodes.get(k);
 
             if (!entry) {
-                let el: ChildNode;
+                let el: Node;
 
                 const c = context(() => {
                     el = renderFn(item, i);
-
-                    insertBefore(el, prev);
                     return () => remove(el);
                 });
 
                 entry = { context: c, el: el! };
                 nodes.set(k, entry);
-            } else {
-                if (entry.el.previousSibling !== prev) {
-                    insertBefore(entry.el, prev);
-                }
             }
+
+            const next = prev.nextSibling;
+            if (entry.el !== next) after(entry.el, prev);
 
             prev = entry.el;
         }
